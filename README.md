@@ -12,4 +12,7 @@ Building a payment ledger is hard because:
 * Correctness matters more than availability
 
 ## Design
-
+Initial Design
+* Single process (No need for sync among multitple nodes)
+* No idempotency
+* Simple HTTP request
