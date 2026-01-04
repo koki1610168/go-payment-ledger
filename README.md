@@ -16,3 +16,17 @@ Initial Design
 * Single process (No need for sync among multitple nodes)
 * No idempotency
 * Simple HTTP request
+---
+```
+* GET /clients/{clientId}/balance
+* POST /payments
+```
+```
+* POST /payments
+{
+    clientId: ...,
+    amount: 1400,
+    currency: "JPY"
+}
+```
+
