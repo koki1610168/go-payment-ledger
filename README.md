@@ -17,6 +17,29 @@ Initial Design
 * No idempotency
 * Simple HTTP request
 ---
+
+### Database
+
+clients
+```
+   Column   |           Type           | Collation | Nullable | Default 
+------------+--------------------------+-----------+----------+---------
+ client_id  | text                     |           | not null | 
+ balance    | bigint                   |           | not null | 
+ currency   | text                     |           | not null | 
+ created_at | timestamp with time zone |           | not null | now()
+```
+ledger_entries
+```
+   Column   |           Type           | Collation | Nullable | Default 
+------------+--------------------------+-----------+----------+---------
+ entry_id   | uuid                     |           | not null | 
+ client_id  | text                     |           | not null | 
+ amount     | bigint                   |           | not null | 
+ created_at | timestamp with time zone |           | not null | now()
+```
+### HTTP Request
+
 ```
 * GET /clients/{clientId}/balance
 * POST /payments
