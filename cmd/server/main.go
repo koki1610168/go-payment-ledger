@@ -2,13 +2,21 @@ package main
 
 import (
 	"fmt"
-	//"log"
+	"context"
+	"log"
 	"github.com/koki1610168/go-payment-ledger/internal/server"
+
 )
 
 func main() {
-	server.ConnectDatabase()
-	defer server.CloseDatabase()
-	fmt.Println("Ok!")
+	ctx := context.Background()
+
+	db, err := server.NewDB(ctx)
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer db.Close()
+
+	fmt.Println("DB Connected")
 
 }
