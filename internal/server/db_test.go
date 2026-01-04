@@ -5,10 +5,6 @@ import (
 	"testing"
 )
 
-func TestPass(t *testing.T) {
-	// empty test
-}
-
 func TestDBConnection(t *testing.T) {
 	ctx := context.Background()
 	db, err := NewDB(ctx)
