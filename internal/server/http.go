@@ -11,11 +11,11 @@ import (
 
 var db *pgx.Conn
 
-type User struct {
-	ID int64
-	Email string
-	Balance int64
-	CretedAt time.Time
+type Client struct {
+	Client_ID string
+	Balacne int64
+	Currency string
+	CreatedAt time.Time
 }
 
 func ConnectDatabase() {
@@ -36,29 +36,4 @@ func CloseDatabase() {
 		fmt.Println("Database closed")
 	}
 }
-
-func UserByEmail(email string) (User, error) {
-	var usr User
-
-	row := db.QueryRow(context.Background(), "SELECT * FROM users WHERE email = $1", email)
-	if err := row.Scan(&usr.ID, &usr.Email, &usr.Balance, &usr.CretedAt); err != nil {
-		return usr, err
-	}
-	return usr, nil
-
-}
-
-func AddUser(usr User) (int64, error) {
-	if db == nil {
-		return 0, fmt.Errorf("database not connected")
-	}
-	result, err := db.Exec(context.Background(), "INSERT INTO users (email, balance) VALUES ($1, $2)", usr.Email, usr.Balance)
-	if err != nil {
-		return 0, err
-	}
-	fmt.Println(result)
-	return 0, nil
-}
-
-
 
