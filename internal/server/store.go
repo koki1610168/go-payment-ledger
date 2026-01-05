@@ -70,7 +70,7 @@ func (s *Store) CreatePayment(
  func (s *Store) GetBalance(
 	ctx context.Context,
 	clientId string,
-) (int64, error) {
+) (int64, string, error) {
 
 	var balance int64
 	var currency string
@@ -78,11 +78,11 @@ func (s *Store) CreatePayment(
 		`SELECT balance, currency FROM clients WHERE client_id = $1`, clientId).Scan(&balance, &currency)
 
 	if err == pgx.ErrNoRows {
-		return 0, ErrClientNotFound
+		return 0, "", ErrClientNotFound
 	}
 	if err != nil {
-		return 0, err 
+		return 0, "", err 
 	}
 
-	return balance, nil
+	return balance, currency, nil
 }
