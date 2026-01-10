@@ -7,7 +7,8 @@ import (
 	"encoding/json"
 )
 type BalanceResponse struct {
-	Balance int
+	ClientID string
+	Balance int64
 	Currency string
 }
 
@@ -39,11 +40,20 @@ func (h *Handler) postPayments(w http.ResponseWriter, r *http.Request) {
 
 func (h *Handler) getBalance(w http.ResponseWriter, r *http.Request) {
 	// We want to call GetBalance
+	if r.Method != http.MethodGet {
+		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+	}
 	client_id := strings.TrimPrefix(r.URL.Path, "/clients/")
 	client_id = strings.TrimSuffix(client_id, "/balance")
 
-	balance, currency, _ := h.store.GetBalance(r.Context(), client_id)
+	balance, currency, err := h.store.GetBalance(r.Context(), client_id)
 
-	json.NewEncoder(w).Encode(BalanceResponse{int(balance), currency})
+	if err != nil {
+		http.Error(w, "client not found", http.StatusNotFound)
+	}
 
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(BalanceResponse{client_id, balance, currency})
 }

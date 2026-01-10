@@ -1,12 +1,12 @@
 package server
 
 import (
-	"fmt"
 	"testing"
 	"net/http"
 	"net/http/httptest"
 	"context"
 	"encoding/json"
+	"reflect"
 )
 
 
@@ -26,7 +26,7 @@ func (s *StubStore) CreatePayment(ctx context.Context, clientID string, amount i
 func TestHandler(t *testing.T) {
 	// The request should be json and the resonse is also json
 	// I want to make a fake dateabase
-	t.Run("Initial setup ", func(t *testing.T) {
+	t.Run("getting balance from an existing client ", func(t *testing.T) {
 		_, _, store  := newTestStore(t)
 
 		handler := NewHandler(store)
@@ -36,16 +36,24 @@ func TestHandler(t *testing.T) {
 
 		//handler.postPayments(response, request)
 		handler.getBalance(response, request)
+		want := BalanceResponse{
+			ClientID: "client_001",
+			Balance: 5150,
+			Currency: "JPY",
+		}
 
 		var balanceClient BalanceResponse
 		err := json.NewDecoder(response.Body).Decode(&balanceClient)
 		if err != nil {
 			t.Errorf("error occured")
 		}
-		fmt.Println(balanceClient.Balance)
-
+		assertEqualBalanceResponse(t, balanceClient, want)
 	})
-	
+}
 
+func assertEqualBalanceResponse(t testing.TB, got, want BalanceResponse) {
+	if !reflect.DeepEqual(got, want) {
+		t.Errorf("got %v want %v", got, want)
+	}
 }
 
