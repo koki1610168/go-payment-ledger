@@ -1,11 +1,11 @@
 package main
 
 import (
-	"fmt"
 	"context"
 	"log"
-	"github.com/koki1610168/go-payment-ledger/internal/server"
+	"net/http"
 
+	"github.com/koki1610168/go-payment-ledger/internal/server"
 )
 
 func main() {
@@ -17,6 +17,10 @@ func main() {
 	}
 	defer db.Close()
 
-	fmt.Println("DB Connected")
+	store := server.NewStore(db.Pool)
+	handler := server.NewHandler(store)
+
+	log.Println("Listening on port 8080")
+	log.Fatal(http.ListenAndServe(":8080", handler))
 
 }
