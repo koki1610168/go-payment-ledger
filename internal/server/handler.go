@@ -49,20 +49,38 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) postPayments(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
 		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		return
 	}
 	var paymentReq PaymentRequest
 
 	if err := json.NewDecoder(r.Body).Decode(&paymentReq); err != nil {
 		http.Error(w, "failed to load request", http.StatusBadRequest)
+		return
 	}
 
 	client_id := paymentReq.ClientID
 	amount := paymentReq.Amount
 	currency := paymentReq.Currency
 
+	if client_id == "" {
+		http.Error(w, "client_id is required", http.StatusBadRequest)
+		return
+	}
+
+	if amount <= 0 {
+		http.Error(w, "amount must be greater than 0", http.StatusBadRequest)
+		return
+	}
+
+	if currency == "" {
+		http.Error(w, "currency is required", http.StatusBadRequest)
+		return
+	}
+
 	newBalance, err := h.store.CreatePayment(r.Context(), client_id, amount)
 	if err != nil {
-		http.Error(w, "failed to initiate payment", http.StatusBadRequest)
+		http.Error(w, "failed to initiate payment", http.StatusBadRequest)	
+		return
 	}
 
 	encodeToJSON(w, client_id, newBalance, currency)
@@ -74,6 +92,7 @@ func (h *Handler) getBalance(w http.ResponseWriter, r *http.Request) {
 	// We want to call GetBalance
 	if r.Method != http.MethodGet {
 		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		return
 	}
 	client_id := strings.TrimPrefix(r.URL.Path, "/clients/")
 	client_id = strings.TrimSuffix(client_id, "/balance")
@@ -81,7 +100,8 @@ func (h *Handler) getBalance(w http.ResponseWriter, r *http.Request) {
 	balance, currency, err := h.store.GetBalance(r.Context(), client_id)
 
 	if err != nil {
-		http.Error(w, "client not found", http.StatusNotFound)
+		http.Error(w, "failed to get balance", http.StatusNotFound)
+		return
 	}
 
 	encodeToJSON(w, client_id, balance, currency)
