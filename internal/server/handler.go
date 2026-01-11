@@ -41,6 +41,10 @@ func NewHandler(store ClientStore) *Handler{
 	return h
 }
 
+func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	h.mux.ServeHTTP(w, r)
+}
+
 
 func (h *Handler) postPayments(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
