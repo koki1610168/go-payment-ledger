@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"strings"
 	"encoding/json"
+	"fmt"
 )
 
 type PaymentRequest struct {
@@ -69,11 +70,6 @@ func (h *Handler) postPayments(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if amount <= 0 {
-		http.Error(w, "amount must be greater than 0", http.StatusBadRequest)
-		return
-	}
-
 	if currency == "" {
 		http.Error(w, "currency is required", http.StatusBadRequest)
 		return
@@ -86,7 +82,7 @@ func (h *Handler) postPayments(w http.ResponseWriter, r *http.Request) {
 
 	newBalance, err := h.store.CreatePayment(r.Context(), client_id, amount, idempotencyKey)
 	if err != nil {
-		http.Error(w, "failed to initiate payment", http.StatusBadRequest)	
+		http.Error(w, fmt.Sprintf("failed to initiate payment because of %v", err), http.StatusBadRequest)	
 		return
 	}
 

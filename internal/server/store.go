@@ -9,6 +9,7 @@ import (
 )
 
 var ErrClientNotFound = errors.New("client not found")
+var ErrInsufficientBalance = errors.New("insufficient balance")
 
 type Store struct {
 	db *pgxpool.Pool
@@ -45,6 +46,10 @@ func (s *Store) CreatePayment(
 		if err == nil {
 			return existing_balance, nil
 		}
+
+		if err != pgx.ErrNoRows {
+			return 0, err
+		}
 	}
 
 	var balance int64
@@ -60,6 +65,10 @@ func (s *Store) CreatePayment(
 	}
 
 	newBalance := balance + amount
+
+	if newBalance < 0 {
+		return 0, ErrInsufficientBalance
+	}
 
 	_, err = tx.Exec(ctx,
 		`UPDATE clients SET balance = $1 WHERE client_id = $2`, newBalance, clientID,

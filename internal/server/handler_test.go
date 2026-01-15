@@ -152,8 +152,10 @@ func TestDoulbeCharge(t *testing.T) {
 
 	assertEqualBalance(t, balance1, expectedBalance)
 	assertEqualBalance(t, balance2, expectedBalance)
-
 }
+
+
+
 
 func decodeJSON(t testing.TB, response *httptest.ResponseRecorder) Response {
 	t.Helper()
