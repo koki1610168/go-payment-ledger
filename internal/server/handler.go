@@ -8,9 +8,10 @@ import (
 )
 
 type PaymentRequest struct {
-	ClientID string
-	Amount int64
-	Currency string
+	ClientID string `json:"clientID"`
+	Amount int64 `json:"amount"`
+	Currency string `json:"currency"`
+	IdempotencyKey string `json:"idempotencyKey"`
 }
 
 type Response struct {
@@ -22,7 +23,7 @@ type Response struct {
 
 type ClientStore interface {
 	GetBalance(ctx context.Context, clientId string) (int64, string, error) 
-	CreatePayment(ctx context.Context, clientId string, amount int64,) (int64, error) 
+	CreatePayment(ctx context.Context, clientId string, amount int64, idempotencyKey string) (int64, error) 
 }
 
 type Handler struct {
@@ -61,6 +62,7 @@ func (h *Handler) postPayments(w http.ResponseWriter, r *http.Request) {
 	client_id := paymentReq.ClientID
 	amount := paymentReq.Amount
 	currency := paymentReq.Currency
+	idempotencyKey := paymentReq.IdempotencyKey
 
 	if client_id == "" {
 		http.Error(w, "client_id is required", http.StatusBadRequest)
@@ -77,7 +79,12 @@ func (h *Handler) postPayments(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	newBalance, err := h.store.CreatePayment(r.Context(), client_id, amount)
+	if idempotencyKey == "" {
+		http.Error(w, "idempotencyKey is required", http.StatusBadRequest)
+		return
+	}
+
+	newBalance, err := h.store.CreatePayment(r.Context(), client_id, amount, idempotencyKey)
 	if err != nil {
 		http.Error(w, "failed to initiate payment", http.StatusBadRequest)	
 		return

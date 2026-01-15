@@ -16,12 +16,14 @@ var ErrorNotFound = errors.New("error not found")
 type StubStore struct {
 	balances map[string]int64
 	currencies map[string]string
+	idempotencyKeys map[string]int64
 }
 
 func NewStubClient() *StubStore {
 	return &StubStore{
 		balances: make(map[string]int64),
 		currencies: make(map[string]string),
+		idempotencyKeys: make(map[string]int64),
 	}
 }
 
@@ -39,12 +41,23 @@ func (s *StubStore) GetBalance(ctx context.Context, clientId string) (int64, str
 
 }
 
-func (s *StubStore) CreatePayment(ctx context.Context, clientId string, amount int64,) (int64, error) {
+func (s *StubStore) CreatePayment(ctx context.Context, clientId string, amount int64, idempotencyKey string) (int64, error) {
 	_, ok := s.balances[clientId]
 	if !ok {
 		return 0, ErrorNotFound
 	}
+
+	if idempotencyKey != "" {
+		_, ok := s.idempotencyKeys[idempotencyKey]
+		if ok {
+			return s.idempotencyKeys[idempotencyKey], nil
+		}
+	}
 	s.balances[clientId] += amount
+
+	if idempotencyKey != "" {
+		s.idempotencyKeys[idempotencyKey] = s.balances[clientId]
+	}
 	return s.balances[clientId], nil
 
 }
@@ -81,12 +94,16 @@ func TestHandler(t *testing.T) {
 
  		handler := NewHandler(store)
 
+		idempotencKey := "payment-12345"
+
 		var buf bytes.Buffer
 		reqJSON := map[string]any{
 			"clientID": "client_001",
 			"amount": 1400,
 			"currency": "JPY",
+			"idempotencyKey": idempotencKey,
 		}
+
 		err := json.NewEncoder(&buf).Encode(reqJSON)
 		if err != nil {
 			t.Fatalf("Failed to encode request JSON, %v", err)
@@ -112,12 +129,15 @@ func TestDoulbeCharge(t *testing.T) {
 	handler := NewHandler(store)
 	paymentAmount := int64(1000)
 
+	idempotencyKey := "pay-1234"
+
 	makePayment := func() int64 {
         var buf bytes.Buffer
         json.NewEncoder(&buf).Encode(map[string]any{
-            "ClientID": "client_001",
-            "Amount":   paymentAmount,
-            "Currency": "JPY",
+            "clientID": "client_001",
+            "amount":   paymentAmount,
+            "currency": "JPY",
+            "idempotencyKey": idempotencyKey,
         })
         req, _ := http.NewRequest(http.MethodPost, "/payments", &buf)
         res := httptest.NewRecorder()
@@ -125,11 +145,12 @@ func TestDoulbeCharge(t *testing.T) {
         return decodeJSON(t, res).Balance
     }
 
-	_ = makePayment()
+	balance1 := makePayment()
 	balance2 := makePayment()
 
 	expectedBalance := initialBalance + paymentAmount
 
+	assertEqualBalance(t, balance1, expectedBalance)
 	assertEqualBalance(t, balance2, expectedBalance)
 
 }
