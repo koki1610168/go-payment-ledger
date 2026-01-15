@@ -104,6 +104,36 @@ func TestHandler(t *testing.T) {
 	})
 }
 
+func TestDoulbeCharge(t *testing.T) {
+	store := NewStubClient()
+	initialBalance := int64(10000)
+	store.SeedClient("client_001", initialBalance, "JPY")
+
+	handler := NewHandler(store)
+	paymentAmount := int64(1000)
+
+	makePayment := func() int64 {
+        var buf bytes.Buffer
+        json.NewEncoder(&buf).Encode(map[string]any{
+            "ClientID": "client_001",
+            "Amount":   paymentAmount,
+            "Currency": "JPY",
+        })
+        req, _ := http.NewRequest(http.MethodPost, "/payments", &buf)
+        res := httptest.NewRecorder()
+        handler.mux.ServeHTTP(res, req)
+        return decodeJSON(t, res).Balance
+    }
+
+	_ = makePayment()
+	balance2 := makePayment()
+
+	expectedBalance := initialBalance + paymentAmount
+
+	assertEqualBalance(t, balance2, expectedBalance)
+
+}
+
 func decodeJSON(t testing.TB, response *httptest.ResponseRecorder) Response {
 	t.Helper()
 	var balanceClient Response

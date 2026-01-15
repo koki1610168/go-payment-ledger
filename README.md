@@ -2,7 +2,7 @@
 
 ## Action Items
 * [ ] add more tests on the handler (e.g. Bad JSON request)
-* [ ] go concurrency <- it must pollute the database because no idempotency keys
+* [ ] Add idempotency key
 
 This repository includes a simple payment ledger written in Go.
 The README describes the problems I encounter and the solutions I've implemented  
