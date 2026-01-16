@@ -62,6 +62,11 @@ func (s *StubStore) CreatePayment(ctx context.Context, clientId string, amount i
 
 }
 
+func (s *StubStore) Transfer(ctx context.Context, fromClientId string, 
+	toClientId string, amount int64, idempotencyKey string) (int64, int64, error)  {
+	return 0, 0, nil
+}
+
 func TestHandler(t *testing.T) {
 	// The request should be json and the resonse is also json
 	// I want to make a fake dateabase
@@ -76,13 +81,13 @@ func TestHandler(t *testing.T) {
 
 		//handler.postPayments(response, request)
 		handler.mux.ServeHTTP(response, request)
-		want := Response{
+		want := PaymentResponse{
 			ClientID: "client_001",
 			Balance: 10000,
 			Currency: "JPY",
 		}
 
-		balanceClient := decodeJSON(t, response)
+		balanceClient := decodePaymentResponseJSON(t, response)
 		assertEqualResponse(t, balanceClient, want)
 	})
 
@@ -114,7 +119,7 @@ func TestHandler(t *testing.T) {
 
 		handler.mux.ServeHTTP(response, request)
 
-		balanceClient := decodeJSON(t, response)
+		balanceClient := decodePaymentResponseJSON(t, response)
 		afterBalance := balanceClient.Balance
 
 		assertEqualBalance(t, afterBalance, want)
@@ -142,7 +147,7 @@ func TestDoulbeCharge(t *testing.T) {
         req, _ := http.NewRequest(http.MethodPost, "/payments", &buf)
         res := httptest.NewRecorder()
         handler.mux.ServeHTTP(res, req)
-        return decodeJSON(t, res).Balance
+        return decodePaymentResponseJSON(t, res).Balance
     }
 
 	balance1 := makePayment()
@@ -154,17 +159,56 @@ func TestDoulbeCharge(t *testing.T) {
 	assertEqualBalance(t, balance2, expectedBalance)
 }
 
+func TestTransfer(t *testing.T) {
+	t.Run("transfer runs successfully", func(t *testing.T) {
+		store := NewStubClient()
+		initialBalance := int64(10000)
+		paymentAmount := int64(1000)
+		store.SeedClient("client_001", initialBalance, "JPY")
+		store.SeedClient("client_002", initialBalance, "JPY")
+
+		handler := NewHandler(store)
+
+        var buf bytes.Buffer
+        json.NewEncoder(&buf).Encode(map[string]any{
+			"from_client_id": "client_001",
+			"to_client_id": "client_002",
+			"amount": paymentAmount,
+			"idempotencyKey": "transfer-001",
+        })
+
+        req, _ := http.NewRequest(http.MethodPost, "/transfer", &buf)
+        res := httptest.NewRecorder()
+        handler.mux.ServeHTTP(res, req)
+
+		transferResponse := decodeTransferResponseJSON(t, res)
+
+		if transferResponse.Amount != 1000 {
+			t.Errorf("amount value is wrong. got %d, want %d", transferResponse.Amount, 1000)
+		}
+
+	})
+}
 
 
 
-func decodeJSON(t testing.TB, response *httptest.ResponseRecorder) Response {
+func decodePaymentResponseJSON(t testing.TB, response *httptest.ResponseRecorder) PaymentResponse {
 	t.Helper()
-	var balanceClient Response
+	var balanceClient PaymentResponse
 	err := json.NewDecoder(response.Body).Decode(&balanceClient)
 	if err != nil {
 		t.Errorf("error occured")
 	}
 	return balanceClient
+}
+func decodeTransferResponseJSON(t testing.TB, response *httptest.ResponseRecorder) TransferResponse {
+	t.Helper()
+	var transferRes TransferResponse
+	err := json.NewDecoder(response.Body).Decode(&transferRes)
+	if err != nil {
+		t.Errorf("error occured")
+	}
+	return transferRes
 }
 
 func assertEqualBalance(t testing.TB, got, want int64) {
@@ -175,7 +219,7 @@ func assertEqualBalance(t testing.TB, got, want int64) {
 	}
 }
 
-func assertEqualResponse(t testing.TB, got, want Response) {
+func assertEqualResponse(t testing.TB, got, want PaymentResponse) {
 	if !reflect.DeepEqual(got, want) {
 		t.Errorf("got %v want %v", got, want)
 	}

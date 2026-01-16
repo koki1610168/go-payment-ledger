@@ -110,3 +110,13 @@ func (s *Store) GetBalance(
 
 	return balance, currency, nil
 }
+
+func (s *Store) Transfer(
+	ctx context.Context,
+	fromClientId string,
+	toClientId string,
+	amount int64,
+) (int64, int64, error) {
+
+	return 0, 0, nil
+}
