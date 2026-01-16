@@ -1,6 +1,9 @@
 # Go Payment Ledger
 
 ## Action Items
+* [ ] Implement Transfer function
+    * Make sure to use transaction for atomic operation
+* [ ] Write integration test
 * [X] add more tests on the handler (e.g. Bad JSON request)
 * [X] Add idempotency key
 
