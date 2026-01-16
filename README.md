@@ -1,9 +1,9 @@
 # Go Payment Ledger
 
 ## Action Items
-* [ ] Implement Transfer function
+* [X] Implement Transfer function
     * Make sure to use transaction for atomic operation
-* [ ] Write integration test
+* [X] Write integration test
 * [X] add more tests on the handler (e.g. Bad JSON request)
 * [X] Add idempotency key
 
@@ -38,12 +38,13 @@ clients
 ```
 ledger_entries
 ```
-   Column   |           Type           | Collation | Nullable | Default 
-------------+--------------------------+-----------+----------+---------
- entry_id   | uuid                     |           | not null | 
- client_id  | text                     |           | not null | 
- amount     | bigint                   |           | not null | 
- created_at | timestamp with time zone |           | not null | now()
+     Column      |           Type           | Collation | Nullable | Default 
+-----------------+--------------------------+-----------+----------+---------
+ entry_id        | uuid                     |           | not null | 
+ client_id       | text                     |           | not null | 
+ amount          | bigint                   |           | not null | 
+ created_at      | timestamp with time zone |           | not null | now()
+ idempotency_key | text                     |           |          | 
 ```
 ### HTTP Request
 
@@ -54,10 +55,19 @@ ledger_entries
 ```
 * POST /payments
 {
-    clientId: ...,
+    clientId: "client_001",
     amount: 1400,
     currency: "JPY"
 }
 ```
 
+```
+* POST /transfer
+{
+    from_client_id: "client_001",
+    to_client_id: "client_002",
+    amount: 300
+    idempotencyKey: "transfer-01"
+}
+```
 
