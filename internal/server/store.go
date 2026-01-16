@@ -36,13 +36,13 @@ func (s *Store) CreatePayment(
 
 	if idempotencyKey != "" {
 		var existing_balance int64
-		err := tx.QueryRow(ctx, 
+		err := tx.QueryRow(ctx,
 			`SELECT c.balance
 			FROM ledger_entries le
 			JOIN clients c ON c.client_id = le.client_id
 			WHERE le.idempotency_key = $1
 			`, idempotencyKey).Scan(&existing_balance)
-		
+
 		if err == nil {
 			return existing_balance, nil
 		}
@@ -53,15 +53,15 @@ func (s *Store) CreatePayment(
 	}
 
 	var balance int64
-	err = tx.QueryRow(ctx, 
-		`SELECT balance FROM clients WHERE client_id = $1 FOR UPDATE`, 
-		clientID,).Scan(&balance)
+	err = tx.QueryRow(ctx,
+		`SELECT balance FROM clients WHERE client_id = $1 FOR UPDATE`,
+		clientID).Scan(&balance)
 
 	if err == pgx.ErrNoRows {
 		return 0, ErrClientNotFound
 	}
 	if err != nil {
-		return 0, err 
+		return 0, err
 	}
 
 	newBalance := balance + amount
@@ -91,7 +91,7 @@ func (s *Store) CreatePayment(
 	return newBalance, nil
 }
 
- func (s *Store) GetBalance(
+func (s *Store) GetBalance(
 	ctx context.Context,
 	clientId string,
 ) (int64, string, error) {
@@ -105,7 +105,7 @@ func (s *Store) CreatePayment(
 		return 0, "", ErrClientNotFound
 	}
 	if err != nil {
-		return 0, "", err 
+		return 0, "", err
 	}
 
 	return balance, currency, nil
