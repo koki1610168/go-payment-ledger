@@ -116,7 +116,100 @@ func (s *Store) Transfer(
 	fromClientId string,
 	toClientId string,
 	amount int64,
+	idempotencyKey string,
 ) (int64, int64, error) {
+	tx, err := s.db.BeginTx(ctx, pgx.TxOptions{})
+	if err != nil {
+		return 0, 0, err
+	}
 
-	return 0, 0, nil
+	// This to make sure no table update is half-done
+	defer tx.Rollback(ctx)
+
+	if idempotencyKey != "" {
+		var count int
+		err := tx.QueryRow(ctx,
+			`SELECT COUNT(*) FROM ledger_entries WHERE idempotency_key = $1`, 
+			idempotencyKey).Scan(&count)
+		
+		if err != nil {
+			return 0, 0, err
+		}
+
+		if count > 0 {
+			var fromBalance, toBalance int64
+			err = tx.QueryRow(ctx,
+			`SELECT balance FROM clients WHERE client_id = $1`, fromClientId).Scan(&fromBalance)
+			if err != nil {
+				return 0, 0, err
+			}
+
+			err = tx.QueryRow(ctx,
+			`SELECT balance FROM clients WHERE client_id = $1`, toClientId).Scan(&toBalance)
+			if err != nil {
+				return 0, 0, err
+			}
+			return fromBalance, toBalance, nil
+		}
+	}
+
+	var oldFromBalance, oldToBalance int64
+	err = tx.QueryRow(ctx,
+		`SELECT balance FROM clients WHERE client_id = $1`, 
+		fromClientId).Scan(&oldFromBalance)
+
+	if err == pgx.ErrNoRows {
+		return 0, 0, ErrClientNotFound
+	}
+	if err != nil {
+		return 0, 0, err
+	}
+
+	err = tx.QueryRow(ctx,
+		`SELECT balance FROM clients WHERE client_id = $1`, 
+		toClientId).Scan(&oldToBalance)
+
+	if err == pgx.ErrNoRows {
+		return 0, 0, ErrClientNotFound
+	}
+	if err != nil {
+		return 0, 0, err
+	}
+
+	newFromBalance := oldFromBalance - amount
+	newToBalance := oldToBalance + amount
+
+	_, err = tx.Exec(ctx,
+		`UPDATE clients SET balance = $1 WHERE client_id = $2`, newFromBalance, fromClientId)
+	if err != nil {
+		return 0, 0, err
+	}
+
+	_, err = tx.Exec(ctx,
+		`UPDATE clients SET balance = $1 WHERE client_id = $2`, newToBalance, toClientId)
+	if err != nil {
+		return 0, 0, err
+	}
+
+
+	_, err = tx.Exec(ctx,
+		`INSERT INTO ledger_entries (entry_id, client_id, amount, idempotency_key) VALUES (gen_random_uuid(), $1, $2, $3)`, 
+		fromClientId, -amount, idempotencyKey)
+
+	if err != nil {
+		return 0, 0, err
+	}
+
+	_, err = tx.Exec(ctx,
+		`INSERT INTO ledger_entries (entry_id, client_id, amount) VALUES (gen_random_uuid(), $1, $2)`, 
+		toClientId, amount)
+
+	if err != nil {
+		return 0, 0, err
+	}
+
+	if err = tx.Commit(ctx); err != nil {
+		return 0, 0, err
+	}
+	return newFromBalance, newToBalance, nil
 }

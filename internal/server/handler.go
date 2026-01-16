@@ -172,7 +172,7 @@ func (h *Handler) transferMoney(w http.ResponseWriter, r *http.Request) {
 	
 	from_new_balance, to_new_balance, err := h.store.Transfer(r.Context(), from_client_id, to_client_id, amount, idempotencyKey)
 	if err != nil {
-		http.Error(w, "failed to transfer", http.StatusNotFound)
+		http.Error(w, fmt.Sprintf("failed to transfer, %v", err), http.StatusNotFound)
 		return
 	}
 
