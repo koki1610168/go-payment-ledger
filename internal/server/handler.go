@@ -60,7 +60,7 @@ func NewHandler(store ClientStore) *Handler{
 	mux := http.NewServeMux()
 
 	mux.HandleFunc("/payments", h.postPayments)
-	mux.HandleFunc("/clients/", h.getBalance)
+	mux.HandleFunc("/clients/", h.clientsRouter)
 	mux.HandleFunc("/transfer", h.transferMoney)
 
 	h.mux = mux
@@ -69,6 +69,30 @@ func NewHandler(store ClientStore) *Handler{
 
 func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	h.mux.ServeHTTP(w, r)
+}
+
+func (h *Handler) clientsRouter(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+	rest := strings.TrimPrefix(r.URL.Path, "/clients/")
+	endpoint := strings.Split(strings.Trim(rest, "/"), "/")
+
+	if len(endpoint) != 2 {
+		http.Error(w, "bad request", http.StatusBadRequest)
+	}
+
+	switch endpoint[1] {
+	case "balance":
+		h.getBalance(w, r, endpoint[0])
+	case "ledger":
+		h.getLedger(w, r, endpoint[0])
+	default:
+		http.Error(w, "the endpoint not found", http.StatusBadGateway)
+	}
+
+
 }
 
 
@@ -117,14 +141,8 @@ func (h *Handler) postPayments(w http.ResponseWriter, r *http.Request) {
 
 }
 
-func (h *Handler) getBalance(w http.ResponseWriter, r *http.Request) {
+func (h *Handler) getBalance(w http.ResponseWriter, r *http.Request, client_id string) {
 	// We want to call GetBalance
-	if r.Method != http.MethodGet {
-		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
-		return
-	}
-	client_id := strings.TrimPrefix(r.URL.Path, "/clients/")
-	client_id = strings.TrimSuffix(client_id, "/balance")
 
 	balance, currency, err := h.store.GetBalance(r.Context(), client_id)
 
@@ -134,6 +152,10 @@ func (h *Handler) getBalance(w http.ResponseWriter, r *http.Request) {
 	}
 
 	encodePaymentResponseToJSON(w, client_id, balance, currency)
+}
+
+func (h *Handler) getLedger(w http.ResponseWriter, r *http.Request, client_id string) {
+	fmt.Println("Ledger endpoint detected")
 }
 
 
