@@ -190,6 +190,52 @@ func TestTransfer(t *testing.T) {
 	})
 }
 
+func TestClientsLedger(t *testing.T) {
+	store := NewStubClient()
+	initialBalance := int64(10000)
+	paymentAmount := 3000
+	store.SeedClient("client_001", initialBalance, "JPY")
+	store.SeedClient("client_002", initialBalance, "JPY")
+
+	handler := NewHandler(store)
+
+	makePayment := func() int64 {
+		idempotencyKey, _ := NewIdempotencyKey(t)
+		var buf bytes.Buffer
+		json.NewEncoder(&buf).Encode(map[string]any{
+			"clientID": "client_001",
+			"amount":   paymentAmount,
+			"currency": "JPY",
+			"idempotencyKey": idempotencyKey,
+		})
+		req, _ := http.NewRequest(http.MethodPost, "/payments", &buf)
+		res := httptest.NewRecorder()
+		handler.mux.ServeHTTP(res, req)
+		return decodePaymentResponseJSON(t, res).Balance
+	}
+
+	balance1 := makePayment()
+	balance2 := makePayment()
+	if balance1 != 13000 && balance2 != 16000 {
+		t.Errorf("balance1: %d, balance2: %d", balance1, balance2)
+
+	}
+
+
+	req, _ := http.NewRequest(http.MethodGet, "/clients/client_001/ledger", nil)
+	res := httptest.NewRecorder()
+	handler.mux.ServeHTTP(res, req)
+
+	/*
+	transferResponse := decodeTransferResponseJSON(t, res)
+	if transferResponse.CliendID != "client_001" {
+		t.Errorf("got %v, but want %d", transferResponse.CliendID, "client_001")
+	}
+	*/
+
+
+}
+
 
 
 func decodePaymentResponseJSON(t testing.TB, response *httptest.ResponseRecorder) PaymentResponse {
