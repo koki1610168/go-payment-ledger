@@ -20,7 +20,8 @@ func main() {
 	store := server.NewStore(db.Pool)
 	handler := server.NewHandler(store)
 
-	log.Println("Listening on port 8080")
-	log.Fatal(http.ListenAndServe(":8080", handler))
+	limiter := server.NewRateLimiter(10, 20)
 
+	log.Println("Listening on port 8080")
+	log.Fatal(http.ListenAndServe(":8080", limiter.Middleware(handler)))
 }
