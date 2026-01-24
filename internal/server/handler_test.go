@@ -67,6 +67,10 @@ func (s *StubStore) Transfer(ctx context.Context, fromClientId string,
 	return 0, 0, nil
 }
 
+func (s *StubStore) GetLedger(ctx context.Context, clientId string) ([]Ledger, error) {
+	return nil, nil
+}
+
 func TestHandler(t *testing.T) {
 	// The request should be json and the resonse is also json
 	// I want to make a fake dateabase

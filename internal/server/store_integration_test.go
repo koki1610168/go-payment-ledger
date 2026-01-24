@@ -9,6 +9,7 @@ import (
 	"encoding/json"
 	"crypto/rand"
 	"encoding/hex"
+
 )
 
 func TestTransferCorrectly(t *testing.T) {
@@ -82,6 +83,17 @@ func TestTransferCorrectly(t *testing.T) {
 }
 
 
+func TestGetLedger(t *testing.T) {
+	_, _, store := newTestStore(t)
+	handler := NewHandler(store)
+	client := "client_001"
+	req, _ := http.NewRequest(http.MethodGet, fmt.Sprintf("/clients/%s/ledger", client), nil)
+	res := httptest.NewRecorder()
+	handler.mux.ServeHTTP(res, req)
+
+	fmt.Println(res.Body)
+
+}
 
 
 func NewIdempotencyKey(t testing.TB) (string, error) {
