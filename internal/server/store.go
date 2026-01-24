@@ -3,13 +3,25 @@ package server
 import (
 	"context"
 	"errors"
+	"time"
+	"database/sql"
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
+
+	"github.com/google/uuid"
 )
 
 var ErrClientNotFound = errors.New("client not found")
 var ErrInsufficientBalance = errors.New("insufficient balance")
+
+type Ledger struct {
+	EntryId uuid.UUID
+	ClientId string
+	Amount int64
+	CreatedAt time.Time
+	IdempotencyKey sql.NullString
+}
 
 type Store struct {
 	db *pgxpool.Pool
@@ -89,6 +101,31 @@ func (s *Store) CreatePayment(
 		return 0, err
 	}
 	return newBalance, nil
+}
+
+func (s *Store) GetLedger(
+	ctx context.Context,
+	clientId string,
+) ([]Ledger, error){
+	
+	rows, err := s.db.Query(ctx, `SELECT * FROM ledger_entries WHERE client_id = $1`, clientId)
+	if err != nil {
+		return nil, err
+	}
+	var ledger_entries []Ledger 
+
+	for rows.Next() {
+		var ledger Ledger
+		if err := rows.Scan(&ledger.EntryId, &ledger.ClientId, 
+				&ledger.Amount, &ledger.CreatedAt, &ledger.IdempotencyKey); err != nil {
+			return ledger_entries, err
+		}
+		ledger_entries = append(ledger_entries, ledger)
+	}
+	if err = rows.Err(); err != nil {
+		return ledger_entries, err
+	}
+	return ledger_entries, nil
 }
 
 func (s *Store) GetBalance(

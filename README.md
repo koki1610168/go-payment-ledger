@@ -1,11 +1,10 @@
 # Go Payment Ledger
 
 ## Action Items
-* [X] Implement Transfer function
-    * Make sure to use transaction for atomic operation
-* [X] Write integration test
-* [X] add more tests on the handler (e.g. Bad JSON request)
-* [X] Add idempotency key
+- [ ] Rewrite the whole program from scratch
+- [ ] Docker implementation
+- [ ] Front-end
+- [X] Ledger Endpoint
 
 This repository includes a simple payment ledger written in Go.
 The README describes the problems I encounter and the solutions I've implemented  

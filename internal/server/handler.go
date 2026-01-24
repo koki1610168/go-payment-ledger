@@ -43,9 +43,17 @@ type TransferResponse struct {
 }
 // ----------------------------------------------
 
+// ----------------------------------------------
+// Ledger Response
+type LedgerResponse struct {
+	ClientID string `json:"client_id"`
+	Entries []Ledger `json:"ledger_entires"`
+}
+
 
 type ClientStore interface {
 	GetBalance(ctx context.Context, clientId string) (int64, string, error) 
+	GetLedger(ctx context.Context, clientId string) ([]Ledger, error)
 	CreatePayment(ctx context.Context, clientId string, amount int64, idempotencyKey string) (int64, error) 
 	Transfer(ctx context.Context, fromClientId string, toClientId string, amount int64, idempotencyKey string) (int64, int64, error) 
 }
@@ -155,7 +163,13 @@ func (h *Handler) getBalance(w http.ResponseWriter, r *http.Request, client_id s
 }
 
 func (h *Handler) getLedger(w http.ResponseWriter, r *http.Request, client_id string) {
-	fmt.Println("Ledger endpoint detected")
+	ledger_entries, err := h.store.GetLedger(r.Context(), client_id)
+	if err != nil {
+		http.Error(w, fmt.Sprintf("failed to fetch ledger, %v", err), http.StatusNotFound)
+	}
+
+	encodeLedgerToJSON(w, client_id, ledger_entries)
+	
 }
 
 
@@ -218,3 +232,9 @@ func encodeTransferResponseToJSON(w http.ResponseWriter, from_client_id string, 
 	json.NewEncoder(w).Encode(TransferResponse{from_client_id, to_client_id, amount, from_new_balance, to_new_balance})
 }
 
+
+func encodeLedgerToJSON(w http.ResponseWriter, clientId string, ledger_entries []Ledger) {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(LedgerResponse{ClientID: clientId, Entries: ledger_entries})
+}
